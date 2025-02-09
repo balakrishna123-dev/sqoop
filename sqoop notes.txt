@@ -1,0 +1,248 @@
+SQOOP  : Ingestion Tool
+============
+	It is used to ingest data from RDBMS -> HDFS or HDFS -> RDBMS 
+	
+	IMPORT : RDBMS -> HDFS
+	
+	
+	EXPORT : HDFS -> RDBMS 
+
+	
+IMPORT  :
+RDBMS :                               HDFS 
+=============================================
+	mysql   (tables)                  Files 
+	postgresql
+	mssql
+	oracle
+	
+EXPORT : 
+
+HDFS (Files ) -----------------> RDMBS (Table)
+
+
+mysql : 
+==========
+$ mysql -u root -p (enter)
+enter password : cloudera	
+
+Alternate way to login mysql.
+$ mysql -uroot -pcloudera
+
+Before Sqoop : 
+		Mapredcue : Mysql -> HDFS.   X
+		Sqoop : mysql -> HDFS.
+
+
+Bydefault sqoop run on MapReduce.
+================================
+Map  and  Reduce 
+
+SQOOP uses Mapper.
+There is no reducer phase in sqoop.
+
+How many mappers released by default in sqoop = 4
+
+Sqoop Features: 
+===============
+1. Full / Incremental Load -> 
+2. Parallel Import and Export -> 
+		mysql - 100 records -> Import(100 sec) - 100/5 mappers = 20,20,20,20,20 = 20 secs.
+3. Import result of sql query -> 
+4. Compression - zip,bzip2, snappy
+5. File types - txt file, parquet, orc, sequence file, avro file.
+6. Connector to all major RDBMS system.
+7. Kerberos security integration.
+
+
+
+SQOOP IMPORT 
+===================
+
+SOURCE : Mysql
+
+TARGET : hdfs
+
+
+how to login into mysql database :
+================================
+$ mysql -u root -p (press enter)
+Enter password : cloudera
+
+another way  to login :
+$ mysql -uroot -pcloudera (press enter)
+
+show databases;
+
+use retail_db;
+
+show tables;
+
+To show list databases in sqoop : 
+sqoop list-databases --connect jdbc:mysql://localhost/ --username root --password cloudera
+
+To show the tables in retaildb.
+sqoop list-tables --connect jdbc:mysql://localhost/retail_db --username root --password cloudera
+
+SQOOP IMPORT :
+---------------
+Import orders table from mysql to hdfs.
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders
+
+load data into specific folder.
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --target-dir /user/cloudera/kondalrao/orders
+
+Daily Load :
+------------
+ --append : It is used to append the data in hdfs
+	sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --target-dir /user/cloudera/kondalrao/orders --append
+
+ --delete-target-dir : It is used to overwrite data in hdfs.
+	sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --target-dir /user/cloudera/kondalrao/orders --delete-target-dir
+
+
+Where  :
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera -m 5 --table orders --target-dir /user/cloudera/kondalrao/orders --delete-target-dir --where "order_status = 'COMPLETE'"
+
+cloumns :
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera -m 5 --table orders --target-dir /user/cloudera/kondalrao/orders --delete-target-dir --where "order_status = 'COMPLETE'" --columns "order_id,order_status"
+
+
+Control Mappers :
+===================
+-m <number of mappers>
+--num-mappers <number of mappers>
+
+default mappers : 4
+-m 10
+-m 2
+
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders -m 10 --target-dir /user/cloudera/kondalrao/sqoop20230414b
+
+
+File Types :
+===================================================
+Default file type is txt/csv file.
+
+--as-textfile : It is used to load as text file in HDFS.
+--------------
+ default.
+	line seperate (\n)
+	fields seperate (,)
+
+--fields-terminated-by '|' : It is used to change the default delimiter.
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --num-mappers 2 --target-dir /user/cloudera/kondalrao/sqoop20230414d --as-textfile --fields-terminated-by '|'
+
+--as-avrodatafile : it is used to load as avrodata file in HDFS.
+------------------
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --num-mappers 2 --target-dir /user/cloudera/kondalrao/sqoop20230414e --as-avrodatafile
+
+
+--as-sequencefile : It is used to load as sequence file in HDFS.
+-----------------
+qoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --num-mappers 2 --target-dir /user/cloudera/kondalrao/sqoop20230414f --as-sequencefile
+
+--as-parquetfile : It is used to load as parquet file in HDFS.
+----------------
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --num-mappers 2 --target-dir /user/cloudera/kondalrao/sqoop20230414g --as-parquetfile
+
+ORC : sqoop doesn't support ORC file format.
+
+
+Compressions : 
+=====================
+--compress --compression-code 'none'  -> Default
+
+gzip :  --compress --compression-code 'gzip'
+----------------------
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --num-mappers 2 --target-dir /user/cloudera/kondalrao/sqoop20230414h --compress --compression-codec 'gzip'
+
+
+bzip2 :
+-------------
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --num-mappers 2 --target-dir /user/cloudera/kondalrao/sqoop20230414i --compress --compression-codec 'bzip2'
+
+
+snappy :
+-----------
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --num-mappers 2 --target-dir /user/cloudera/kondalrao/sqoop20230414j --compress --compression-codec 'SnappyCodec'
+
+
+
+Incremental Mode :
+========================
+
+append :
+--------------
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders -m 2 --target-dir /user/cloudera/kondalrao/sqoop20230414k --incremental append --check-column order_id --last-value 50000
+
+
+lastmodified :
+--------------
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders -m 2 --target-dir /user/cloudera/kondalrao/sqoop20230414l --incremental lastmodified --check-column order_date --last-value '2023-06-02'
+
+
+Import all tables :
+-------------------------
+sqoop import-all-tables --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --target-dir /user/cloudera/kondalrao/alltables
+
+--query :
+===========
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders -m 2 --target-dir /user/cloudera/kondalrao/sqoop20230414l --query "select order_id from orders where \$CONDITIONS and order_status = 'COMPLETE'"
+
+How to use option file :
+-------------------------
+sqoop --options-file config.txt --table orders --target-dir /user/cloudera/kondalrao/sqoop20230414n
+
+option file should be created in LFS.
+config.txt :
+-----------
+import 
+--connect 
+jdbc:mysql://localhost/retail_db
+--username 
+root 
+--password 
+cloudera 
+
+
+SQOOP EXPORT
+==============================================================================================
+sqoop export is used to copy data from HDFS to RDBMS.
+
+create table retail_db.emp_table(id int, name varchar(20), salary int);
+
+generate input in hdfs :
+/user/cloudera/kondalrao/input.csv
+
+sqoop export --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table emp_table --export-dir /user/cloudera/kondalrao/emp.csv
+
+sqoop export from text file with delimiter
+-----------------------------------------
+sqoop export --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table emp_table --export-dir /user/cloudera/kondalrao/emp.csv --input-fields-terminated-by '@'
+
+sqoop export from parquet file :
+---------------------------------
+
+sqoop export --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders_20230414 --export-dir /user/cloudera/kondalrao/sqoop20230414b/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
